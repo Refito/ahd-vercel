@@ -1,0 +1,36 @@
+---
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import Content from '~/components/widgets/Content.astro';
+
+import type { Content as ContentProps } from '~/types';
+
+const {
+  title = '',
+  subtitle = '',
+  contents = [],
+  id,
+  isDark = false,
+  classes = {},
+  bg = await Astro.slots.render('bg'),
+}: {
+  title?: string;
+  subtitle?: string;
+  contents?: Array<ContentProps>;
+  id?: string;
+  isDark?: boolean;
+  classes?: { container?: string };
+  bg?: string | undefined;
+} = Astro.props;
+---
+
+<WidgetWrapper id={id} isDark={isDark} containerClass={`max-w-7xl mx-auto ${classes?.container ?? ''}`} bg={bg}>
+  <Headline title={title} subtitle={subtitle} />
+
+  {
+    contents?.map((block) => (
+      // Render each Content widget with the provided props
+      <Content {...(block as unknown as Record<string, unknown>)} />
+    ))
+  }
+</WidgetWrapper>

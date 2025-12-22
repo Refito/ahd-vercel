@@ -1,0 +1,78 @@
+---
+import type { Content as Props } from '~/types';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import Image from '~/components/common/Image.astro';
+import Button from '~/components/ui/Button.astro';
+
+const {
+  title = await Astro.slots.render('title'),
+  subtitle = await Astro.slots.render('subtitle'),
+  content = await Astro.slots.render('content'),
+  callToAction,
+  image = await Astro.slots.render('image'),
+  isReversed = false,
+  isAfterContent = false,
+
+  id,
+  isDark = false,
+  classes = {},
+  bg = await Astro.slots.render('bg'),
+} = Astro.props;
+---
+
+<WidgetWrapper
+  id={id}
+  isDark={isDark}
+  containerClass={`max-w-7xl mx-auto ${isAfterContent ? 'pt-0 md:pt-0 lg:pt-0' : ''} ${classes?.container ?? ''} py-4 md:py-4 lg:py-4`}
+  bg={bg}
+>
+  <div class="mx-auto max-w-7xl p-4 md:px-8">
+    <div class={`md:flex ${isReversed ? 'md:flex-row-reverse' : ''} md:gap-16`}>
+      <div class="md:basis-1/2 self-center text-left">
+        {title && <h2 class="text-4xl md:text-5xl font-bold tracking-tighter mb-4 font-heading" set:html={title} />}
+
+        {subtitle && <div class="mb-6 text-lg text-muted dark:text-slate-400" set:html={subtitle} />}
+        {content && <div class="mb-6 text-lg text-muted dark:text-slate-400" set:html={content} />}
+
+        {
+          callToAction && (
+            <div class="mt-4 mb-8">
+              <Button variant="primary" {...callToAction} />
+            </div>
+          )
+        }
+      </div>
+      <div aria-hidden="true" class="mt-10 md:mt-0 md:basis-1/2">
+        {
+          image && (
+            <div class="relative m-auto max-w-4xl">
+              {typeof image === 'string' ? (
+                <Fragment set:html={image} />
+              ) : // If a remote absolute URL, render a plain <img> to avoid domain restrictions
+              (image as { src?: string; alt?: string }).src &&
+                /^(https?:)?\/\//.test((image as { src?: string }).src!) ? (
+                <img
+                  src={(image as { src?: string }).src!}
+                  alt={(image as { alt?: string }).alt ?? ''}
+                  class="mx-auto w-full rounded-lg bg-gray-500 shadow-lg"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <Image
+                  class="mx-auto w-full rounded-lg bg-gray-500 shadow-lg"
+                  width={500}
+                  height={500}
+                  widths={[400, 768]}
+                  sizes="(max-width: 768px) 100vw, 432px"
+                  layout="responsive"
+                  {...(image as { src: string; alt?: string })}
+                />
+              )}
+            </div>
+          )
+        }
+      </div>
+    </div>
+  </div>
+</WidgetWrapper>

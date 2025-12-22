@@ -1,0 +1,218 @@
+---
+import Features2 from '~/components/widgets/Features2.astro';
+import Features from '~/components/widgets/Features.astro';
+import Hero from '~/components/widgets/Hero.astro';
+import Layout from '~/layouts/PageLayout.astro';
+import { getServicesPage } from '~/lib/umbraco/queries';
+import { stripHtml, decodeEntities } from '~/utils/text';
+
+// Fetch Services page content
+const res = await getServicesPage();
+
+// Types for hero components
+type RichText = { markup?: string } | undefined;
+type CmsLink = { title?: string; url?: string; target?: string | null };
+type ServiceHeroImage = { url?: string } | { url?: string }[] | null;
+type HeroComponentProps = {
+  title?: RichText | null;
+  subtitle?: RichText | null;
+  backgroundImage?: ServiceHeroImage;
+  heroButton?: CmsLink[] | null;
+};
+type HeroComponentBlock = { content?: { properties?: HeroComponentProps } | null } | null;
+
+const heroBlocks =
+  (res?.properties as unknown as { heroComponents?: { items?: HeroComponentBlock[] } } | undefined)?.heroComponents
+    ?.items ?? [];
+const firstHero = heroBlocks[0]?.content?.properties;
+
+const titleHtml = (firstHero?.title as RichText)?.markup ?? '';
+const subtitleHtml = (firstHero?.subtitle as RichText)?.markup ?? '';
+const bgRaw = firstHero?.backgroundImage;
+const bg = Array.isArray(bgRaw) ? bgRaw[0] : bgRaw;
+const heroPath = bg && typeof bg === 'object' && 'url' in bg ? (bg as { url?: string }).url : undefined;
+const heroUrl = heroPath ? new URL(heroPath, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+
+const heroBtnRaw = firstHero?.heroButton as CmsLink[] | undefined;
+const heroBtn = heroBtnRaw?.[0];
+
+// Second hero (CTA) mapping
+const secondHero = heroBlocks[1]?.content?.properties;
+const secondTitleHtml = (secondHero?.title as RichText)?.markup ?? '';
+const secondSubtitleHtml = (secondHero?.subtitle as RichText)?.markup ?? '';
+const bgRaw2 = secondHero?.backgroundImage;
+const bg2 = Array.isArray(bgRaw2) ? bgRaw2[0] : bgRaw2;
+const heroPath2 = bg2 && typeof bg2 === 'object' && 'url' in bg2 ? (bg2 as { url?: string }).url : undefined;
+const heroUrl2 = heroPath2 ? new URL(heroPath2, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+const heroBtnRaw2 = secondHero?.heroButton as CmsLink[] | undefined;
+const heroBtn2 = heroBtnRaw2?.[0];
+
+// Service block mapping (title, subtitle, cards)
+type CmsRich = { markup?: string } | undefined;
+type ServiceCardLink = { url?: string; title?: string; target?: string | null };
+type ServiceCardProps = {
+  titleServiceCard?: CmsRich | null;
+  descriptionServiceCard?: string | null;
+  buttonServiceCard?: ServiceCardLink[] | null;
+};
+type ServiceCardBlock = { content?: { properties?: ServiceCardProps } | null } | null;
+type ServiceBlocksProps = {
+  titleServiceBlock?: { markup?: string };
+  subtitleServiceBlock?: { markup?: string };
+  serviceCards?: { items?: ServiceCardBlock[] };
+};
+type FeatureItem = {
+  title?: string;
+  description?: string;
+  callToAction?: { text: string; href: string; target?: string };
+};
+
+const blocks = res?.properties as unknown as ServiceBlocksProps | undefined;
+const serviceTitleHtml = blocks?.titleServiceBlock?.markup ?? '';
+const serviceSubtitleHtml = blocks?.subtitleServiceBlock?.markup ?? '';
+const serviceTitleText = decodeEntities(stripHtml(serviceTitleHtml));
+const serviceSubtitleText = decodeEntities(stripHtml(serviceSubtitleHtml));
+
+const serviceCards = blocks?.serviceCards?.items ?? [];
+const featureItems: FeatureItem[] = (serviceCards ?? []).flatMap((block) => {
+  const props = block?.content?.properties;
+  const titleHtml = (props?.titleServiceCard as CmsRich)?.markup ?? '';
+  const title = decodeEntities(stripHtml(titleHtml));
+  const description = props?.descriptionServiceCard ?? '';
+  const link = props?.buttonServiceCard?.[0];
+  if (!title && !description) return [] as FeatureItem[];
+  return [
+    {
+      title,
+      description,
+      callToAction:
+        link?.url && link?.title ? { text: link.title, href: link.url, target: link.target ?? undefined } : undefined,
+    },
+  ];
+});
+
+// Feature list mapping (title, subtitle, items)
+type FeatImg = { url?: string };
+type FeatItemProps = {
+  titleFeatureItem?: { markup?: string } | null;
+  descriptionFeatureItem?: string | null;
+  iconFeatureItem?: FeatImg[] | null;
+};
+type FeatBlock = { content?: { properties?: FeatItemProps } | null } | null;
+type FeatureListBlocks = {
+  titleFeatureList?: { markup?: string };
+  subtitleFeatureList?: { markup?: string };
+  featureItems?: { items?: FeatBlock[] };
+};
+
+const feat = res?.properties as unknown as FeatureListBlocks | undefined;
+const featTitleText = decodeEntities(stripHtml(feat?.titleFeatureList?.markup ?? ''));
+const featSubtitleText = decodeEntities(stripHtml(feat?.subtitleFeatureList?.markup ?? ''));
+const featBlocks = feat?.featureItems?.items ?? [];
+const featItems = featBlocks.flatMap((block) => {
+  const props = block?.content?.properties;
+  const titleHtml = props?.titleFeatureItem?.markup ?? '';
+  const title = decodeEntities(stripHtml(titleHtml));
+  const description = props?.descriptionFeatureItem ?? '';
+  const icon = props?.iconFeatureItem?.[0];
+  const path = icon && typeof icon === 'object' && 'url' in icon ? icon.url : undefined;
+  const imgUrl = path ? new URL(path, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+  if (!title && !description) return [] as FeatureItem[];
+  return [
+    {
+      title,
+      description,
+      image: imgUrl ? { src: imgUrl, alt: title || 'icon' } : undefined,
+    },
+  ];
+});
+
+const metadata = {
+  title: 'Services',
+};
+---
+
+<Layout metadata={metadata}>
+  <!-- Hero Widget ******************* -->
+  <Hero
+    actions={heroBtn?.title && heroBtn?.url
+      ? [
+          {
+            variant: 'primary',
+            text: heroBtn.title,
+            href: heroBtn.url,
+            target: heroBtn.target ?? undefined,
+          },
+        ]
+      : []}
+  >
+    <Fragment slot="bg"
+      >{heroUrl && <div class="absolute inset-0 bg-cover bg-center" style={`background-image: url('${heroUrl}')`} />}
+    </Fragment>
+    {
+      titleHtml && (
+        <Fragment slot="title">
+          <div class="m-4">
+            <Fragment set:html={titleHtml} />
+          </div>
+        </Fragment>
+      )
+    }
+
+    {
+      subtitleHtml && (
+        <Fragment slot="subtitle">
+          <div class="mb-8 flex flex-col gap-3">
+            <Fragment set:html={subtitleHtml} />
+          </div>
+        </Fragment>
+      )
+    }
+  </Hero>
+
+  <!-- Features2 Widget ************** -->
+
+  <Features2 title={serviceTitleText} subtitle={serviceSubtitleText} columns={3} items={featureItems} />
+
+  <!-- Features Widget ******************* -->
+  <Features title={featTitleText} subtitle={featSubtitleText} items={featItems} columns={2} />
+
+  <!-- Hero2 Widget ******************* -->
+
+  {
+    (secondTitleHtml || secondSubtitleHtml || heroUrl2 || heroBtn2) && (
+      <Hero actions={[]}>
+        <Fragment slot="bg">
+          <div
+            class="absolute inset-0 bg-cover bg-center"
+            style="background-image: linear-gradient(rgba(245, 248, 250, 1), rgba(245, 248, 250, 1)) !important;"
+          />
+        </Fragment>
+        <Fragment slot="content">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 text-left">
+              {secondTitleHtml && (
+                <h2
+                  class="text-[2.75rem] font-bold leading-tighter tracking-tighter text-black font-heading"
+                  set:html={secondTitleHtml}
+                />
+              )}
+              {heroBtn2?.title && heroBtn2?.url && (
+                <div>
+                  <a
+                    class="btn btn-primary whitespace-nowrap"
+                    href={heroBtn2.url}
+                    target={heroBtn2.target ?? undefined}
+                  >
+                    {heroBtn2.title}
+                  </a>
+                </div>
+              )}
+            </div>
+            {secondSubtitleHtml && <p class="mt-4 text-xl text-black text-left" set:html={secondSubtitleHtml} />}
+          </div>
+        </Fragment>
+      </Hero>
+    )
+  }
+</Layout>

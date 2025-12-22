@@ -1,0 +1,173 @@
+---
+import Hero from '~/components/widgets/Hero.astro';
+import Layout from '~/layouts/PageLayout.astro';
+import ContentSection from '~/components/widgets/ContentSection.astro';
+import CardBlock from '~/components/widgets/CardBlock.astro';
+import TechTales from '~/components/widgets/TechTales.astro';
+import { stripHtml, decodeEntities } from '~/utils/text';
+import { getAboutPage } from '~/lib/umbraco/queries';
+
+const metadata = {
+  title: 'About us',
+};
+const res = await getAboutPage();
+type RichText = { markup?: string } | undefined;
+const titleHtml = (res?.properties?.title as RichText)?.markup ?? '';
+const subtitleHtml = (res?.properties?.subtitle as RichText)?.markup ?? '';
+type CmsLink = { title?: string; url?: string; target?: string | null };
+const heroBtnRaw = res?.properties?.heroButton as CmsLink[] | undefined;
+const heroBtn = heroBtnRaw?.[0];
+const raw = res?.properties?.backgroundImage;
+const first = Array.isArray(raw) ? raw[0] : raw;
+const heroPath = first && typeof first === 'object' && 'url' in first ? (first as { url?: string }).url : undefined;
+const heroUrl = heroPath ? new URL(heroPath, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+
+// ContentSection mapping from CMS block content
+type ServiceImage = { url?: string };
+type ServiceLink = { url?: string; title?: string; target?: string | null };
+type ServiceItemProps = {
+  itemTitle?: { markup?: string } | null;
+  itemDescription?: { markup?: string } | null;
+  itemImage?: ServiceImage | ServiceImage[] | null;
+  itemLink?: ServiceLink | ServiceLink[] | null;
+};
+type ServiceBlock = { content?: { properties?: ServiceItemProps } | null } | null;
+
+type BlockTitle = { markup?: string } | undefined;
+type AboutBlocks = { blockTitle?: BlockTitle; blockSubtitle?: BlockTitle; blockItems?: { items?: ServiceBlock[] } };
+const blocksProps = res?.properties as unknown as AboutBlocks | undefined;
+const blockTitleHtml = blocksProps?.blockTitle?.markup ?? '';
+const blockSubtitleHtml = blocksProps?.blockSubtitle?.markup ?? '';
+const sectionTitle = decodeEntities(stripHtml(blockTitleHtml));
+const sectionSubtitle = decodeEntities(stripHtml(blockSubtitleHtml));
+
+const serviceBlocks = (blocksProps?.blockItems?.items ?? []) as ServiceBlock[];
+const contentSectionItems = serviceBlocks.flatMap((block, index) => {
+  const props = block?.content?.properties;
+  const titleHtml = props?.itemTitle?.markup ?? '';
+  const descriptionHtml = props?.itemDescription?.markup ?? '';
+  const imgRaw = props?.itemImage;
+  const img = Array.isArray(imgRaw) ? imgRaw[0] : imgRaw;
+  const path = img && typeof img === 'object' && 'url' in img ? (img as ServiceImage).url : undefined;
+  const imgUrl = path ? new URL(path, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+  if (!titleHtml && !descriptionHtml && !imgUrl) return [];
+  const linkRaw = props?.itemLink;
+  const link = Array.isArray(linkRaw) ? linkRaw[0] : linkRaw;
+  const callToAction =
+    link?.url && link?.title ? { text: link.title, href: link.url, target: link.target ?? undefined } : undefined;
+  return [
+    {
+      isReversed: index % 2 === 1,
+      title: decodeEntities(stripHtml(titleHtml)),
+      content: descriptionHtml, // keep markup for description
+      image: imgUrl ? { src: imgUrl, alt: decodeEntities(stripHtml(titleHtml)) } : undefined,
+      callToAction,
+    },
+  ];
+});
+
+// CardBlock mapping from About page
+type MemberSignature = { url?: string };
+type MemberCardProps = {
+  cardTitle?: { markup?: string } | null;
+  cardDescription?: { markup?: string } | null;
+  cardSignature?: MemberSignature | MemberSignature[] | null;
+};
+type MemberCardBlock = { content?: { properties?: MemberCardProps } | null } | null;
+
+const memberCards =
+  (res?.properties as unknown as { memberCards?: { items?: MemberCardBlock[] } } | undefined)?.memberCards?.items ?? [];
+const memberItems = memberCards.flatMap((block) => {
+  const props = block?.content?.properties;
+  const titleHtml = props?.cardTitle?.markup ?? '';
+  const descriptionHtml = props?.cardDescription?.markup ?? '';
+  const sigRaw = props?.cardSignature;
+  const sig = Array.isArray(sigRaw) ? sigRaw[0] : sigRaw;
+  const path = sig && typeof sig === 'object' && 'url' in sig ? (sig as MemberSignature).url : undefined;
+  const imgUrl = path ? new URL(path, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+  const title = decodeEntities(stripHtml(titleHtml));
+  const description = decodeEntities(stripHtml(descriptionHtml));
+  if (!title && !description && !imgUrl) return [];
+  return [
+    {
+      image: imgUrl ? { src: imgUrl, alt: title } : undefined,
+      title,
+      description,
+    },
+  ];
+});
+
+const memberBlockTitleHtml = (res?.properties?.memberBlockTitle as { markup?: string } | undefined)?.markup ?? '';
+const memberBlockSubtitleHtml = (res?.properties?.memberBlockSubtitle as { markup?: string } | undefined)?.markup ?? '';
+const memberBlockTitleText = decodeEntities(stripHtml(memberBlockTitleHtml));
+const memberBlockSubtitleText = decodeEntities(stripHtml(memberBlockSubtitleHtml));
+
+// TechTales mapping from About page Umbraco response
+type TalesProps = {
+  talesTitle?: { markup?: string };
+  talesDescription?: { markup?: string };
+  talesName?: { markup?: string };
+  talesDate?: { markup?: string };
+  talesDiscover?: { markup?: string };
+  talesLink?: CmsLink[] | undefined;
+  talesSubtitle?: CmsLink[] | undefined;
+};
+
+const talesProps = res?.properties as unknown as TalesProps | undefined;
+const talesTitleHtml = talesProps?.talesTitle?.markup ?? '';
+const talesDescriptionHtml = talesProps?.talesDescription?.markup ?? '';
+const talesNameHtml = talesProps?.talesName?.markup ?? '';
+const talesDateHtml = talesProps?.talesDate?.markup ?? '';
+const talesDiscoverHtml = talesProps?.talesDiscover?.markup ?? '';
+const talesReadMore = talesProps?.talesLink?.[0];
+const talesSubtitle = talesProps?.talesSubtitle?.[0];
+---
+
+<Layout metadata={metadata}>
+  <!-- Hero Widget ******************* -->
+
+  <Hero
+    actions={heroBtn?.title && heroBtn?.url
+      ? [
+          {
+            variant: 'primary',
+            text: heroBtn.title,
+            href: heroBtn.url,
+            target: heroBtn.target ?? undefined,
+          },
+        ]
+      : []}
+  >
+    <Fragment slot="bg"
+      >{heroUrl && <div class="absolute inset-0 bg-cover bg-center" style={`background-image: url('${heroUrl}')`} />}
+    </Fragment>
+    <Fragment slot="title">
+      <div class="m-4">
+        <Fragment set:html={titleHtml} />
+      </div>
+    </Fragment>
+
+    <Fragment slot="subtitle">
+      <div class="mb-8 flex flex-col gap-3">
+        <Fragment set:html={subtitleHtml} />
+      </div>
+    </Fragment>
+  </Hero>
+
+  <!-- ContentSection Widget ************* -->
+  <ContentSection title={sectionTitle} subtitle={sectionSubtitle} contents={contentSectionItems} />
+
+  <!-- CardBlock Widget ************* -->
+  <CardBlock title={memberBlockTitleText} subtitle={memberBlockSubtitleText} items={memberItems} />
+
+  <!-- TechTales Widget ************* -->
+  <TechTales
+    titleHtml={talesTitleHtml}
+    subtitleLink={talesSubtitle}
+    descriptionHtml={talesDescriptionHtml}
+    nameHtml={talesNameHtml}
+    dateHtml={talesDateHtml}
+    discoverHtml={talesDiscoverHtml}
+    readMore={talesReadMore}
+  />
+</Layout>

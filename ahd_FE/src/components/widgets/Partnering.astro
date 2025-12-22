@@ -1,0 +1,157 @@
+---
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import { Swiper, SwiperWrapper, SwiperSlide, SwiperButtonPrev, SwiperButtonNext } from 'astro-swiper';
+import 'swiper/css';
+import 'swiper/css/navigation';
+
+type ImageItem = {
+  src: string;
+  alt?: string;
+  href?: string;
+  target?: string;
+};
+
+const {
+  title = '',
+  subtitle = '',
+  tagline = '',
+  images = [],
+  itemsPerSlide = 4,
+  id,
+  isDark = false,
+  classes = {},
+  bg = await Astro.slots.render('bg'),
+}: {
+  title?: string;
+  subtitle?: string;
+  tagline?: string;
+  images?: ImageItem[];
+  itemsPerSlide?: number;
+  id?: string;
+  isDark?: boolean;
+  classes?: { container?: string };
+  bg?: string | undefined;
+} = Astro.props;
+
+const defaultBg =
+  '<div class="absolute inset-0" style="background-image: linear-gradient(rgba(245, 248, 250, 1), rgba(245, 248, 250, 1)) !important;"></div>';
+---
+
+<WidgetWrapper
+  id={id}
+  isDark={isDark}
+  containerClass={`max-w-7xl mx-auto ${classes?.container ?? ''}`}
+  bg={bg ?? defaultBg}
+>
+  <Headline
+    title={title}
+    subtitle={subtitle}
+    tagline={tagline}
+    classes={{ title: 'text-3xl md:text-4xl text-black dark:text-black' }}
+  />
+
+  <div class="relative m-auto w-3/4" data-partnering-root>
+    <Swiper
+      class="partnering-swiper"
+      options={{
+        slidesPerView: itemsPerSlide,
+        spaceBetween: 20,
+        navigation: {
+          nextEl: '.swiper-button-next.partnering-next',
+          prevEl: '.swiper-button-prev.partnering-prev',
+        },
+        breakpoints: {
+          1024: { slidesPerView: itemsPerSlide },
+          768: { slidesPerView: Math.max(2, Math.min(itemsPerSlide, 3)) },
+          480: { slidesPerView: 2 },
+          0: { slidesPerView: 1 },
+        },
+      }}
+    >
+      <SwiperWrapper>
+        {
+          images &&
+            images.map(
+              (image) =>
+                image?.src && (
+                  <SwiperSlide>
+                    <div class="flex justify-center my-2 lg:my-4 py-1 px-3">
+                      {image.href ? (
+                        <a href={image.href} target={image.target ?? undefined} rel="noopener noreferrer">
+                          <img
+                            src={image.src}
+                            alt={image.alt || ''}
+                            class="h-12 object-contain w-full"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        </a>
+                      ) : (
+                        <img
+                          src={image.src}
+                          alt={image.alt || ''}
+                          class="h-12 w-auto"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      )}
+                    </div>
+                  </SwiperSlide>
+                )
+            )
+        }
+      </SwiperWrapper>
+    </Swiper>
+    <SwiperButtonPrev class="swiper-button-prev partnering-prev" />
+    <SwiperButtonNext class="swiper-button-next partnering-next" />
+  </div>
+</WidgetWrapper>
+
+<style is:global>
+  /* Custom styles for Swiper navigation buttons */
+  .partnering-prev,
+  .partnering-next {
+    z-index: 50;
+  }
+  /* Push prev further left and next further right */
+  .partnering-prev {
+    left: -2.5rem !important;
+  }
+  .partnering-next {
+    right: -2.5rem !important;
+  }
+  [data-partnering-root] [data-scroller] {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE 10+ */
+  }
+  [data-partnering-root] [data-scroller]::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none; /* Chrome, Safari, Opera */
+  }
+  /* Avoid layout shift when arrows overlap content on small screens */
+  [data-partnering-root] {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+  @media (min-width: 768px) {
+    [data-partnering-root] {
+      padding-left: 3rem;
+      padding-right: 3rem;
+    }
+  }
+
+  /* Force carousel arrow styles regardless of theme */
+  [data-partnering-root] .wui-arrow,
+  [data-partnering-root] .wui-arrow > *,
+  [data-partnering-root] .wui-arrow button,
+  [data-partnering-root] .wui-arrow a,
+  [data-partnering-root] .wui-arrow [role='button'] {
+    color: black !important; /* gray-900 */
+  }
+  [data-partnering-root] .wui-arrow svg {
+    width: 1.1rem !important; /* 20px */
+    height: 1.1rem !important; /* 20px */
+  }
+</style>

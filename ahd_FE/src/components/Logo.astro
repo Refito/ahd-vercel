@@ -1,0 +1,17 @@
+---
+import { getSettingsPage } from '~/lib/umbraco/queries';
+
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+const res = await getSettingsPage();
+
+const raw = res?.properties?.headerLogo;
+const first = Array.isArray(raw) ? raw[0] : raw;
+const logoPath = first && typeof first === 'object' && 'url' in first ? (first as { url?: string }).url : undefined;
+const logoUrl = logoPath ? new URL(logoPath, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+---
+
+<span
+  class="self-center ml-2 rtl:ml-0 rtl:mr-2 text-2xl md:text-xl font-bold text-gray-900 whitespace-nowrap dark:text-white"
+>
+  {logoUrl && <img src={logoUrl} alt="Logo" class="h-8" />}
+</span>

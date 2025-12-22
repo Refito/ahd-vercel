@@ -1,0 +1,41 @@
+---
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+
+const {
+  quote = await Astro.slots.render('quote'),
+  author = await Astro.slots.render('author'),
+  image = await Astro.slots.render('image'),
+
+  id,
+  isDark = false,
+  classes = {},
+  bg = await Astro.slots.render('bg'),
+} = Astro.props;
+---
+
+<WidgetWrapper id={id} isDark={isDark} containerClass={`max-w-7xl mx-auto ${classes?.container ?? ''}`} bg={bg}>
+  <div class="mx-auto py-0 md:py-0 lg:py-0">
+    <div class="m-auto max-w-5xl py-10 md:py-14 lg:py-0">
+      {
+        quote && (
+          <p class="text-lg md:text-2xl leading-8 md:leading-9 text-default text-justify font-bold" data-quote>
+            <Fragment set:html={quote} />
+          </p>
+        )
+      }
+
+      {
+        (author || image) && (
+          <div class="mt-8 flex items-center justify-start gap-4">
+            {image && (
+              <div class="h-16 w-16 rounded-full overflow-hidden bg-gray-200">
+                <Fragment set:html={image} />
+              </div>
+            )}
+            {author && <p class="text-default text-base md:text-lg text-left">{author}</p>}
+          </div>
+        )
+      }
+    </div>
+  </div>
+</WidgetWrapper>

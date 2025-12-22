@@ -1,0 +1,112 @@
+---
+import { Icon } from 'astro-icon/components';
+import { SITE } from 'astrowind:config';
+import { getHomePermalink } from '~/utils/permalinks';
+import { getSettingsPage } from '~/lib/umbraco/queries';
+
+interface Link {
+  text?: string;
+  href?: string;
+  ariaLabel?: string;
+  icon?: string;
+}
+
+interface Links {
+  title?: string;
+  links: Array<Link>;
+}
+
+export interface Props {
+  links: Array<Links>;
+  socialLinks: Array<Link>;
+  footNote?: string;
+  theme?: string;
+}
+
+const { socialLinks = [], links = [], footNote = '', theme = 'light' } = Astro.props;
+
+// Resolve logo and company address from Umbraco (prefer footerLogo, fallback to headerLogo)
+const settings = await getSettingsPage();
+type MediaItem = { url?: string };
+type Rich = { markup?: string } | undefined;
+type SettingsProps = {
+  footerLogo?: MediaItem | MediaItem[];
+  headerLogo?: MediaItem | MediaItem[];
+  companyAddress?: Rich | string;
+};
+const props = (settings?.properties ?? {}) as SettingsProps;
+const rawLogo = props.footerLogo ?? props.headerLogo;
+const firstLogo = Array.isArray(rawLogo) ? (rawLogo[0] as MediaItem) : (rawLogo as MediaItem | undefined);
+const logoRel = firstLogo?.url;
+const logoSrc = logoRel ? new URL(logoRel, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+
+// Company address (supports either rich text object or plain string)
+const addressRaw = props?.companyAddress as unknown;
+const addressHtml = typeof addressRaw === 'string' ? addressRaw : ((addressRaw as Rich)?.markup ?? '');
+---
+
+<footer class:list={[{ dark: theme === 'dark' }, 'relative border-t border-gray-200 dark:border-slate-800 not-prose']}>
+  <div class="dark:bg-dark absolute inset-0 pointer-events-none" aria-hidden="true"></div>
+  <div
+    class="relative max-w-7xl mx-auto px-4 sm:px-6 dark:text-slate-300 intersect-once intersect-quarter intersect-no-queue motion-safe:md:opacity-0 motion-safe:md:intersect:animate-fade"
+  >
+    <div class="grid grid-cols-12 gap-4 gap-y-8 sm:gap-8 py-12 md:py-16">
+      <div class="col-span-12 lg:col-span-4">
+        <div class="mb-2">
+          <a class="inline-block font-bold text-xl" href={getHomePermalink()}>
+            {logoSrc ? <img src={logoSrc} alt={SITE?.name ?? 'Logo'} class="h-8" /> : SITE?.name}
+          </a>
+        </div>
+        {addressHtml && <p class="text-sm text-muted dark:text-gray-400 max-w-sm pt-3">{addressHtml}</p>}
+      </div>
+      {
+        links.map(({ title, links }) => (
+          <div class="col-span-6 md:col-span-3 lg:col-span-2">
+            <div class="dark:text-gray-300 font-medium mb-2">{title}</div>
+            {links && Array.isArray(links) && links.length > 0 && (
+              <ul class="text-sm">
+                {links.map(({ text, href, ariaLabel }) => (
+                  <li class="mb-2">
+                    <a
+                      class="text-muted hover:text-gray-700 hover:underline dark:text-gray-400 transition duration-150 ease-in-out"
+                      href={href}
+                      aria-label={ariaLabel}
+                    >
+                      <Fragment set:html={text} />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))
+      }
+    </div>
+    <div class="md:flex md:items-center md:justify-between py-8 md:py-12">
+      {
+        socialLinks?.length ? (
+          <ul class="flex mb-4 -mr-2 md:mr-4 md:mb-0 rtl:mr-0 rtl:-ml-2 rtl:md:mr-0 rtl:md:ml-4">
+            {socialLinks.map(({ ariaLabel, href, text, icon }) => (
+              <li>
+                <a
+                  class="text-muted dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5 inline-flex items-center"
+                  aria-label={ariaLabel}
+                  href={href}
+                >
+                  {icon && <Icon name={icon} class="w-5 h-5" />}
+                  <Fragment set:html={text} />
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          ''
+        )
+      }
+
+      <div class="text-sm ml-4 dark:text-muted md:order-1">
+        <Fragment set:html={footNote} />
+      </div>
+    </div>
+  </div>
+</footer>

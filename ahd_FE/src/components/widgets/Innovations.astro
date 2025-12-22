@@ -1,0 +1,67 @@
+---
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import Button from '~/components/ui/Button.astro';
+
+type InnovationItem = {
+  iconUrl: string;
+  titleHtml?: string;
+  subtitle?: string;
+};
+
+const {
+  title = '',
+  subtitle = '',
+  items = [],
+  button,
+  id,
+  isDark = false,
+  classes = {},
+  bg = await Astro.slots.render('bg'),
+}: {
+  title?: string;
+  subtitle?: string;
+  items?: InnovationItem[];
+  button?: { text: string; href: string; target?: string };
+  id?: string;
+  isDark?: boolean;
+  classes?: { container?: string };
+  bg?: string | undefined;
+} = Astro.props;
+---
+
+<WidgetWrapper id={id} isDark={isDark} containerClass={`max-w-7xl mx-auto ${classes?.container ?? ''}`} bg={bg}>
+  <Headline
+    classes={{
+      title: 'text-3xl md:text-4xl text-center flex justify-center',
+      subtitle: 'text-2xl text-center bg-transparent',
+    }}
+  >
+    <Fragment slot="title">{title}</Fragment>
+    <Fragment slot="subtitle">{subtitle}</Fragment>
+  </Headline>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-12 items-start mx-4 md:mx-8">
+    {
+      items?.map((item) => (
+        <div class="text-center">
+          <div class="mx-auto mb-6 h-20 w-20 rounded-sm bg-[#0F5163] flex items-center justify-center">
+            <img src={item.iconUrl} alt="" class="h-12 w-12 object-contain" loading="lazy" decoding="async" />
+          </div>
+          {item.titleHtml && <h3 class="text-2xl font-semibold mb-3" set:html={item.titleHtml} />}
+          {item.subtitle && <p class=" text-lg md:text-xl">{item.subtitle}</p>}
+        </div>
+      ))
+    }
+  </div>
+
+  {
+    button?.href && button?.text && (
+      <div class="mt-10 flex justify-center">
+        <Button variant="primary" href={button.href} target={button.target} class="px-6 py-3">
+          {button.text}
+        </Button>
+      </div>
+    )
+  }
+</WidgetWrapper>

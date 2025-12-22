@@ -1,0 +1,300 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import { stripHtml, decodeEntities } from '~/utils/text';
+import { getHomePage } from '~/lib/umbraco/queries';
+import Hero from '~/components/widgets/Hero.astro';
+import Partnering from '~/components/widgets/Partnering.astro';
+import Innovations from '~/components/widgets/Innovations.astro';
+// import Features from '~/components/widgets/Features.astro';
+import ContentSection from '~/components/widgets/ContentSection.astro';
+// import Content from '~/components/widgets/Content.astro';
+import QuotePost from '~/components/widgets/QuotePost.astro';
+import ContactUs from '~/components/widgets/Contact.astro';
+const metadata = {
+  title: 'AstroWind — Free template for creating websites with Astro + Tailwind CSS',
+  ignoreTitleTemplate: true,
+};
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+const res = await getHomePage();
+type RichText = { markup?: string } | undefined;
+const titleHtml = (res?.properties?.title as RichText)?.markup ?? '';
+const subtitleHtml = (res?.properties?.subtitle as RichText)?.markup ?? '';
+type CmsLink = { title?: string; url?: string; target?: string | null };
+const heroBtnRaw = res?.properties?.heroButton as CmsLink[] | undefined;
+const heroBtn = heroBtnRaw?.[0];
+const raw = res?.properties?.backgroundImage;
+const first = Array.isArray(raw) ? raw[0] : raw;
+const heroPath = first && typeof first === 'object' && 'url' in first ? (first as { url?: string }).url : undefined;
+const heroUrl = heroPath ? new URL(heroPath, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+
+// Map Partnering images from Umbraco carouselItems
+type CmsMedia = { url?: string };
+type CmsLinkItem = { url?: string; target?: string | null; title?: string | null };
+type HomeCarouselItemProps = {
+  picture?: CmsMedia | CmsMedia[] | null;
+  title?: { markup?: string } | null;
+  link?: CmsLinkItem | CmsLinkItem[] | null;
+};
+type HomeCarouselItem = { content?: { properties?: HomeCarouselItemProps } | null } | null;
+type HomePageProperties = {
+  carouselItems?: { items?: HomeCarouselItem[] } | null;
+  carousel2Items?: { items?: HomeCarouselItem[] } | null;
+};
+
+const homeProps = res?.properties as unknown as HomePageProperties | undefined;
+const carouselItems = homeProps?.carouselItems?.items ?? [];
+const partneringImages: { src: string; alt?: string; href?: string; target?: string }[] = carouselItems.flatMap(
+  (item) => {
+    const props = item?.content?.properties;
+    const pictureRaw = props?.picture;
+    const picture = Array.isArray(pictureRaw) ? pictureRaw[0] : pictureRaw;
+    const path = picture && typeof picture === 'object' && 'url' in picture ? picture.url : undefined;
+    const src = path ? new URL(path, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+    if (!src) return [];
+    const linkRaw = props?.link;
+    const link = Array.isArray(linkRaw) ? linkRaw[0] : linkRaw;
+    const href = link?.url;
+    const target = link?.target ?? undefined;
+    const altMarkup = props?.title?.markup ?? '';
+    const alt = altMarkup ? decodeEntities(stripHtml(altMarkup)) : undefined;
+    return [{ src, alt: alt ?? undefined, href, target }];
+  }
+);
+
+// Map Partnering 2 images from Umbraco carousel2Items
+const carousel2Items = homeProps?.carousel2Items?.items ?? [];
+const partneringImages2: { src: string; alt?: string; href?: string; target?: string }[] = carousel2Items.flatMap(
+  (item) => {
+    const props = item?.content?.properties;
+    const pictureRaw = props?.picture;
+    const picture = Array.isArray(pictureRaw) ? pictureRaw[0] : pictureRaw;
+    const path = picture && typeof picture === 'object' && 'url' in picture ? picture.url : undefined;
+    const src = path ? new URL(path, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+    if (!src) return [];
+    const linkRaw = props?.link;
+    const link = Array.isArray(linkRaw) ? linkRaw[0] : linkRaw;
+    const href = link?.url;
+    const target = link?.target ?? undefined;
+    const altMarkup = props?.title?.markup ?? '';
+    const alt = altMarkup ? decodeEntities(stripHtml(altMarkup)) : undefined;
+    return [{ src, alt: alt ?? undefined, href, target }];
+  }
+);
+
+// Innovations types and mapping
+type InnovationMedia = { url?: string };
+type InnovationItemProps = {
+  imageIcon?: InnovationMedia | InnovationMedia[] | null;
+  title?: { markup?: string } | null;
+  subtitle?: ({ markup?: string } | string) | null;
+};
+type InnovationBlock = { content?: { properties?: InnovationItemProps } | null } | null;
+type HomePageProperties2 = HomePageProperties & {
+  innovationItems?: { items?: InnovationBlock[] } | null;
+};
+
+const homeProps2 = res?.properties as unknown as HomePageProperties2 | undefined;
+const innovationBlocks = homeProps2?.innovationItems?.items ?? [];
+const innovations = innovationBlocks.flatMap((block) => {
+  const props = block?.content?.properties;
+  const iconRaw = props?.imageIcon;
+  const icon = Array.isArray(iconRaw) ? iconRaw[0] : iconRaw;
+  const path = icon && typeof icon === 'object' && 'url' in icon ? icon.url : undefined;
+  const iconUrl = path ? new URL(path, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+  if (!iconUrl) return [];
+  const titleHtml = props?.title?.markup ?? undefined;
+  const subtitleMarkup = typeof props?.subtitle === 'string' ? props?.subtitle : props?.subtitle?.markup;
+  const subtitle = subtitleMarkup ? decodeEntities(stripHtml(subtitleMarkup)) : undefined;
+  return [{ iconUrl, titleHtml, subtitle }];
+});
+
+// Innovations button and headings
+const innovationsBtnRaw = res?.properties?.buttonLink as CmsLink[] | undefined;
+const innovationsBtn = innovationsBtnRaw?.[0];
+const innovationTitleHtml = (res?.properties?.titleInnovation as { markup?: string } | undefined)?.markup ?? '';
+const innovationSubtitleHtml = (res?.properties?.subtitleInnovation as { markup?: string } | undefined)?.markup ?? '';
+const innovationTitleText = decodeEntities(stripHtml(innovationTitleHtml));
+const innovationSubtitleText = decodeEntities(stripHtml(innovationSubtitleHtml));
+
+// Partnering title from CMS
+const partneringTitleHtml = (res?.properties?.titleCarousel as { markup?: string } | undefined)?.markup ?? '';
+const partneringTitleText = decodeEntities(stripHtml(partneringTitleHtml));
+
+// Partnering 2 title from CMS
+const partneringTitle2Html = (res?.properties?.titleCarousel2 as { markup?: string } | undefined)?.markup ?? '';
+const partneringTitle2Text = decodeEntities(stripHtml(partneringTitle2Html));
+
+// ContentSection mapping from CMS block content
+type ServiceImage = { url?: string };
+type ServiceLink = { url?: string; title?: string; target?: string | null };
+type ServiceItemProps = {
+  itemTitle?: { markup?: string } | null;
+  itemDescription?: { markup?: string } | null;
+  itemImage?: ServiceImage | ServiceImage[] | null;
+  itemLink?: ServiceLink | ServiceLink[] | null;
+};
+type ServiceBlock = { content?: { properties?: ServiceItemProps } | null } | null;
+
+type BlockTitle = { markup?: string } | undefined;
+type HomeBlocks = { blockTitle?: BlockTitle; blockSubtitle?: BlockTitle; blockItems?: { items?: ServiceBlock[] } };
+const blocksProps = res?.properties as unknown as HomeBlocks | undefined;
+const blockTitleHtml = blocksProps?.blockTitle?.markup ?? '';
+const blockSubtitleHtml = blocksProps?.blockSubtitle?.markup ?? '';
+const sectionTitle = decodeEntities(stripHtml(blockTitleHtml));
+const sectionSubtitle = decodeEntities(stripHtml(blockSubtitleHtml));
+
+const serviceBlocks = (blocksProps?.blockItems?.items ?? []) as ServiceBlock[];
+const contentSectionItems = serviceBlocks.flatMap((block, index) => {
+  const props = block?.content?.properties;
+  const titleHtml = props?.itemTitle?.markup ?? '';
+  const descriptionHtml = props?.itemDescription?.markup ?? '';
+  const imgRaw = props?.itemImage;
+  const img = Array.isArray(imgRaw) ? imgRaw[0] : imgRaw;
+  const path = img && typeof img === 'object' && 'url' in img ? (img as ServiceImage).url : undefined;
+  const imgUrl = path ? new URL(path, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+  if (!titleHtml && !descriptionHtml && !imgUrl) return [];
+  const linkRaw = props?.itemLink;
+  const link = Array.isArray(linkRaw) ? linkRaw[0] : linkRaw;
+  console.log('link', imgUrl);
+  const callToAction =
+    link?.url && link?.title ? { text: link.title, href: link.url, target: link.target ?? undefined } : undefined;
+  return [
+    {
+      isReversed: index % 2 === 1,
+      title: decodeEntities(stripHtml(titleHtml)),
+      content: descriptionHtml, // keep markup for description
+      image: imgUrl ? { src: imgUrl, alt: decodeEntities(stripHtml(titleHtml)) } : undefined,
+      callToAction,
+    },
+  ];
+});
+
+// Quote content (rich text) and author (optional)
+type QuoteRich = { markup?: string } | undefined;
+type QuotePhoto = { url?: string } | QuotePhoto[] | undefined;
+type HomeQuote = { quoteText?: QuoteRich; autorInfo?: QuoteRich; autorPhoto?: QuotePhoto };
+const quoteProps = res?.properties as unknown as HomeQuote | undefined;
+const quoteHtml = quoteProps?.quoteText?.markup ?? '';
+const quoteText = decodeEntities(stripHtml(quoteHtml)); // keep formatting for quote
+const quoteAuthorHtml = quoteProps?.autorInfo?.markup ?? '';
+const quoteAuthor = decodeEntities(stripHtml(quoteAuthorHtml));
+const photoRaw = quoteProps?.autorPhoto;
+const photo = Array.isArray(photoRaw) ? photoRaw[0] : photoRaw;
+const photoPath = photo && typeof photo === 'object' && 'url' in photo ? (photo as { url?: string }).url : undefined;
+const quotePhotoUrl = photoPath ? new URL(photoPath, import.meta.env.PUBLIC_UMBRACO_BASE_URL).toString() : undefined;
+console.log('quotePhotoUrl', quoteText);
+---
+
+<Layout metadata={metadata}>
+  <!-- Hero Widget ******************* -->
+  <Hero
+    actions={heroBtn?.title && heroBtn?.url
+      ? [
+          {
+            variant: 'primary',
+            text: heroBtn.title,
+            href: heroBtn.url,
+            target: heroBtn.target ?? undefined,
+          },
+        ]
+      : []}
+  >
+    <Fragment slot="bg"
+      >{heroUrl && <div class="absolute inset-0 bg-cover bg-center" style={`background-image: url('${heroUrl}')`} />}
+    </Fragment>
+    <Fragment slot="title">
+      <div class="m-4">
+        <Fragment set:html={titleHtml} />
+      </div>
+    </Fragment>
+
+    <Fragment slot="subtitle">
+      <div class="mb-8 flex flex-col gap-3">
+        <Fragment set:html={subtitleHtml} />
+      </div>
+    </Fragment>
+  </Hero>
+
+  <!-- Partnering Widget ************* -->
+  <Partnering title={partneringTitleText} images={partneringImages}>
+    <Fragment slot="bg">
+      <div
+        class="absolute inset-0"
+        style="background-image: linear-gradient(rgba(245, 248, 250, 1), rgba(245, 248, 250, 1)) !important;"
+      >
+      </div>
+    </Fragment>
+  </Partnering>
+
+  <!-- Innovations Widget ************* -->
+  <Innovations
+    title={innovationTitleText}
+    subtitle={innovationSubtitleText}
+    items={innovations}
+    button={innovationsBtn?.url && innovationsBtn?.title
+      ? { text: innovationsBtn.title, href: innovationsBtn.url, target: innovationsBtn.target ?? undefined }
+      : undefined}
+  />
+
+  <!-- ContentSection Widget ************* -->
+  <ContentSection title={sectionTitle} subtitle={sectionSubtitle} contents={contentSectionItems} />
+
+  <!-- Quote Widget ******************* -->
+  {
+    quoteText && (
+      <QuotePost>
+        <Fragment slot="quote">{quoteText}</Fragment>
+        {quoteAuthor && <Fragment slot="author">{quoteAuthor}</Fragment>}
+        {quotePhotoUrl && (
+          <Fragment slot="image">
+            <img src={quotePhotoUrl} alt={quoteAuthor} class="h-16 w-16 rounded-full" loading="lazy" decoding="async" />
+          </Fragment>
+        )}
+      </QuotePost>
+    )
+  }
+
+  <!-- Partnering 2 Widget ************* -->
+  <Partnering title={partneringTitle2Text} images={partneringImages2} itemsPerSlide={3}>
+    <Fragment slot="bg">
+      <div
+        class="absolute inset-0"
+        style="background-image: linear-gradient(rgba(245, 248, 250, 1), rgba(245, 248, 250, 1)) !important;"
+      >
+      </div>
+    </Fragment>
+  </Partnering>
+
+  <!-- Contact Widget ************* -->
+  <ContactUs
+    id="form"
+    title="Tell Us About Your Project"
+    subtitle="Let's synchronize our calendars for a strategic rendezvous."
+    inputs={[
+      {
+        type: 'email',
+        name: 'email',
+        label: 'Email',
+      },
+      {
+        type: 'text',
+        name: 'firstName',
+        label: 'First Name',
+      },
+      {
+        type: 'text',
+        name: 'lastName',
+        label: 'Last Name',
+      },
+      {
+        type: 'text',
+        name: 'company',
+        label: 'Company',
+      },
+    ]}
+    textarea={{
+      label: 'Message',
+    }}
+    description="Our support team typically responds within 24 business hours."
+  />
+</Layout>
