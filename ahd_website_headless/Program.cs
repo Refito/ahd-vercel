@@ -13,25 +13,17 @@ var allowedOrigins = builder.Configuration
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AstroFrontend", policy =>
+    options.AddPolicy("VercelPolicy", policy =>
     {
-        if (allowedOrigins.Length == 0)
-        {
-            // Fallback: allow all (NOT recommended for production)
-            policy.AllowAnyOrigin();
-        }
-        else
-        {
-            policy.WithOrigins(allowedOrigins)
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
-        }
+        policy.WithOrigins("https://ahd-prod.vercel.app/")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
     });
 });
 
 WebApplication app = builder.Build();
 
-app.UseCors("AstroFrontend");
+app.UseCors("VercelPolicy");
 await app.BootUmbracoAsync();
 
 
